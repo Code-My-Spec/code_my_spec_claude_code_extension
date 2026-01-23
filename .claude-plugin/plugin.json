@@ -1,0 +1,8 @@
+{
+  "name": "codemyspec",
+  "description": "Generate context specifications for your codebase",
+  "version": "1.0.1",
+  "author": {
+    "name": "CodeMySpec"
+  }
+}
