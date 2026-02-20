@@ -1,0 +1,5 @@
+#!/bin/bash
+# Check if user is authenticated with CodeMySpec
+# Returns {"authenticated": true/false, "email": "..."}
+
+curl -s http://localhost:4002/api/bootstrap/auth/status

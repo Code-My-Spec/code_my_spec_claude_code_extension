@@ -1,0 +1,11 @@
+#!/bin/bash
+# Handle Claude Code hooks via HTTP
+# Reads JSON from stdin and posts to local server
+
+# Read stdin
+STDIN_DATA=$(cat)
+
+curl -s -X POST http://localhost:4002/api/hooks \
+  -H "Content-Type: application/json" \
+  -H "X-Working-Dir: $(pwd)" \
+  -d "$STDIN_DATA"

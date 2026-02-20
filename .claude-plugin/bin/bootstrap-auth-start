@@ -1,0 +1,6 @@
+#!/bin/bash
+# Start OAuth PKCE authentication flow
+# Returns {"auth_url": "...", "state": "..."}
+# The user should visit auth_url in their browser to log in
+
+curl -s -X POST http://localhost:4002/api/bootstrap/auth/start
