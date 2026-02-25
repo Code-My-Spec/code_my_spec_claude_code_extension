@@ -1,0 +1,16 @@
+#!/bin/bash
+# Initialize .code_my_spec/config.yml for a project
+# Usage: bootstrap-init <project_id>
+# Requires authentication and X-Working-Dir
+
+PROJECT_ID="$1"
+
+if [ -z "$PROJECT_ID" ]; then
+  echo '{"error": "Usage: bootstrap-init <project_id>"}'
+  exit 1
+fi
+
+curl -s -X POST http://localhost:4002/api/bootstrap/init \
+  -H "Content-Type: application/json" \
+  -H "X-Working-Dir: $(pwd)" \
+  -d "{\"project_id\": \"$PROJECT_ID\"}"

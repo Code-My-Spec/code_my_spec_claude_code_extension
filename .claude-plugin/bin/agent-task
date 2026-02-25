@@ -1,0 +1,24 @@
+#!/bin/bash
+# Start an agent task via HTTP
+# Usage: agent-task <session_type> <external_id> [module_name]
+
+SESSION_TYPE="$1"
+EXTERNAL_ID="$2"
+MODULE_NAME="$3"
+
+if [ -z "$SESSION_TYPE" ] || [ -z "$EXTERNAL_ID" ]; then
+  echo '{"error": "Usage: agent-task <session_type> <external_id> [module_name]"}'
+  exit 1
+fi
+
+# Build JSON payload
+if [ -n "$MODULE_NAME" ]; then
+  PAYLOAD="{\"external_id\": \"$EXTERNAL_ID\", \"session_type\": \"$SESSION_TYPE\", \"module_name\": \"$MODULE_NAME\"}"
+else
+  PAYLOAD="{\"external_id\": \"$EXTERNAL_ID\", \"session_type\": \"$SESSION_TYPE\"}"
+fi
+
+curl -s -X POST http://localhost:4002/api/agent-tasks/start \
+  -H "Content-Type: application/json" \
+  -H "X-Working-Dir: $(pwd)" \
+  -d "$PAYLOAD"

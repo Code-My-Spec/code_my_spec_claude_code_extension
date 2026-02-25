@@ -1,0 +1,6 @@
+#!/bin/bash
+# List available projects from CodeMySpec server
+# Requires authentication (run bootstrap-auth-start first)
+# Returns {"projects": [...]}
+
+curl -s http://localhost:4002/api/bootstrap/projects

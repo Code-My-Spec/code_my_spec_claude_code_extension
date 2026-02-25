@@ -1,0 +1,17 @@
+{
+  "name": "codemyspec",
+  "description": "Generate context specifications for your codebase",
+  "version": "1.3.0",
+  "author": {
+    "name": "CodeMySpec"
+  },
+  "mcpServers": {
+    "architecture-server": {
+      "type": "http",
+      "url": "http://localhost:4002/mcp/architecture",
+      "headers": {
+        "X-Working-Dir": "${PWD}"
+      }
+    }
+  }
+}
