@@ -1,0 +1,59 @@
+#!/bin/bash
+# Claude Code PermissionRequest hook.
+# Reads JSON from stdin, posts to local server, waits for decision via SSE.
+set -euo pipefail
+
+PORT="${CODEMYSPEC_PORT:-4003}"
+BASE="http://localhost:${PORT}"
+TIMEOUT="${CODEMYSPEC_APPROVE_TIMEOUT:-120}"
+ASK='{"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":{"behavior":"ask"}}}'
+
+# Read the full hook payload from stdin
+INPUT=$(cat)
+
+# Extract tool info
+TOOL_NAME=$(echo "$INPUT" | jq -r '.tool_name // empty')
+if [ -z "$TOOL_NAME" ]; then
+  echo "$ASK"
+  exit 0
+fi
+
+# Build the request body using jq for safe JSON construction
+REQUEST_BODY=$(echo "$INPUT" | jq -c '{tool_name: .tool_name, tool_input: (.tool_input // {})}')
+
+# Post the permission request to the local server (which forwards to production)
+RESPONSE=$(curl -sf -X POST "${BASE}/api/permissions/request" \
+  -H "Content-Type: application/json" \
+  -H "X-Working-Dir: $(pwd)" \
+  -d "$REQUEST_BODY" \
+  2>/dev/null) || {
+  echo "$ASK"
+  exit 0
+}
+
+REQUEST_ID=$(echo "$RESPONSE" | jq -r '.id // empty')
+if [ -z "$REQUEST_ID" ]; then
+  echo "$ASK"
+  exit 0
+fi
+
+# Wait for the decision via SSE stream.
+# curl -N disables buffering; we read the first "data: " line then exit.
+DECISION=$(curl -sfN "${BASE}/api/permissions/${REQUEST_ID}/stream?timeout=${TIMEOUT}" \
+  2>/dev/null \
+  | grep -m1 '^data: ' \
+  | sed 's/^data: //') || DECISION=""
+
+if [ -z "$DECISION" ]; then
+  echo "$ASK"
+  exit 0
+fi
+
+# Build the hook response using jq
+BEHAVIOR=$(echo "$DECISION" | jq -r '.decision // "ask"')
+jq -nc --arg behavior "$BEHAVIOR" '{
+  hookSpecificOutput: {
+    hookEventName: "PermissionRequest",
+    decision: { behavior: $behavior }
+  }
+}'
