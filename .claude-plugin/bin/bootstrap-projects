@@ -1,0 +1,7 @@
+#!/bin/bash
+# List available projects from CodeMySpec server
+# Requires authentication (run bootstrap-auth-start first)
+# Returns {"projects": [...]}
+
+PORT="${CODEMYSPEC_PORT:-4003}"
+curl -s "http://localhost:${PORT}/api/bootstrap/projects"

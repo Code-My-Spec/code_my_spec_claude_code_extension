@@ -1,0 +1,7 @@
+#!/bin/bash
+# Start OAuth PKCE authentication flow
+# Returns {"auth_url": "...", "state": "..."}
+# The user should visit auth_url in their browser to log in
+
+PORT="${CODEMYSPEC_PORT:-4003}"
+curl -s -X POST "http://localhost:${PORT}/api/bootstrap/auth/start"

@@ -1,0 +1,6 @@
+#!/bin/bash
+# Check if user is authenticated with CodeMySpec
+# Returns {"authenticated": true/false, "email": "..."}
+
+PORT="${CODEMYSPEC_PORT:-4003}"
+curl -s "http://localhost:${PORT}/api/bootstrap/auth/status"

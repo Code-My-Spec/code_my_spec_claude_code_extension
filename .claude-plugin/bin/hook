@@ -1,0 +1,30 @@
+#!/bin/bash
+# Handle Claude Code hooks via HTTP
+# Reads JSON from stdin, routes to event-specific endpoint
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Read stdin
+STDIN_DATA=$(cat)
+
+# Extract hook_event_name and map to endpoint path
+EVENT=$(echo "$STDIN_DATA" | grep -o '"hook_event_name":"[^"]*"' | cut -d'"' -f4)
+
+case "$EVENT" in
+  SessionStart)  ENDPOINT="/api/hooks/session-start" ;;
+  PreToolUse)    ENDPOINT="/api/hooks/pre-tool-use" ;;
+  PostToolUse)   ENDPOINT="/api/hooks/post-tool-use" ;;
+  Stop)          ENDPOINT="/api/hooks/stop" ;;
+  *)             exit 0 ;;
+esac
+
+# Auto-update binary check on SessionStart (background, non-blocking)
+if [ "$EVENT" = "SessionStart" ]; then
+  "$SCRIPT_DIR/auto-update" &>/dev/null &
+  disown
+fi
+
+curl -s -X POST "http://localhost:4003${ENDPOINT}" \
+  -H "Content-Type: application/json" \
+  -H "X-Working-Dir: $(pwd)" \
+  -d "$STDIN_DATA"
