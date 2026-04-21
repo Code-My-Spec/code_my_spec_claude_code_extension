@@ -1,0 +1,164 @@
+#!/bin/bash
+# Auto-update CodeMySpec CLI binary on SessionStart
+# Compares local plugin.json version against latest GitHub release.
+# Downloads new binary if a newer version is available.
+# Runs in the background so it doesn't block the session.
+
+set -e
+
+REPO="Code-My-Spec/code_my_spec_claude_code_extension"
+BINARY_NAME="cms"
+PLUGIN_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+PLUGIN_JSON="$PLUGIN_ROOT/.claude-plugin/plugin.json"
+BIN_DIR="$PLUGIN_ROOT/bin"
+LOCK_FILE="/tmp/cms-auto-update.lock"
+UPDATE_LOG="/tmp/cms-auto-update.log"
+
+# Prevent concurrent updates
+if [ -f "$LOCK_FILE" ]; then
+  lock_age=$(( $(date +%s) - $(stat -f %m "$LOCK_FILE" 2>/dev/null || stat -c %Y "$LOCK_FILE" 2>/dev/null || echo 0) ))
+  # Stale lock (> 5 minutes)
+  if [ "$lock_age" -lt 300 ]; then
+    exit 0
+  fi
+fi
+echo $$ > "$LOCK_FILE"
+trap 'rm -f "$LOCK_FILE"' EXIT
+
+log() {
+  echo "[$(date '+%H:%M:%S')] $1" >> "$UPDATE_LOG"
+}
+
+# Get local version from plugin.json
+get_local_version() {
+  if [ -f "$PLUGIN_JSON" ]; then
+    grep '"version"' "$PLUGIN_JSON" | head -1 | sed 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/'
+  else
+    echo "0.0.0"
+  fi
+}
+
+# Get latest release tag from GitHub (strips leading 'v')
+get_remote_version() {
+  curl -sf --max-time 5 \
+    "https://api.github.com/repos/${REPO}/releases/latest" 2>/dev/null \
+    | grep '"tag_name"' | head -1 | sed 's/.*"v\([^"]*\)".*/\1/'
+}
+
+# Compare semver: returns 0 if $1 > $2
+version_gt() {
+  [ "$(printf '%s\n%s' "$1" "$2" | sort -V | tail -1)" != "$2" ]
+}
+
+# Detect platform
+detect_platform() {
+  OS="$(uname -s)"
+  ARCH="$(uname -m)"
+
+  case "$OS" in
+    Darwin) OS="darwin" ;;
+    Linux)  OS="linux" ;;
+    *)      log "Unsupported OS: $OS"; exit 0 ;;
+  esac
+
+  case "$ARCH" in
+    arm64|aarch64) ARCH="arm64" ;;
+    x86_64|amd64)  ARCH="x64" ;;
+    *)              log "Unsupported arch: $ARCH"; exit 0 ;;
+  esac
+
+  echo "${BINARY_NAME}-${OS}-${ARCH}"
+}
+
+# Download updated binary
+download_binary() {
+  local binary_file="$1"
+  local tag="v$2"
+
+  local download_url
+  download_url=$(curl -sf --max-time 5 \
+    "https://api.github.com/repos/${REPO}/releases/tags/${tag}" 2>/dev/null \
+    | grep "browser_download_url.*${binary_file}" | head -1 | cut -d'"' -f4)
+
+  if [ -z "$download_url" ]; then
+    log "No download URL found for $binary_file at $tag"
+    return 1
+  fi
+
+  local tmp_binary
+  tmp_binary="$(mktemp)"
+
+  if curl -fSL --max-time 120 -o "$tmp_binary" "$download_url" 2>/dev/null; then
+    mkdir -p "$BIN_DIR"
+    mv "$tmp_binary" "$BIN_DIR/$BINARY_NAME"
+    chmod +x "$BIN_DIR/$BINARY_NAME"
+    log "Updated $BINARY_NAME to $tag"
+    return 0
+  else
+    rm -f "$tmp_binary"
+    log "Download failed for $download_url"
+    return 1
+  fi
+}
+
+main() {
+  local binary_file
+  binary_file=$(detect_platform)
+
+  # First-time install: no binary exists yet
+  if [ ! -x "$BIN_DIR/$BINARY_NAME" ]; then
+    log "Binary not found — first-time install"
+
+    local remote_version
+    remote_version=$(get_remote_version)
+
+    if [ -z "$remote_version" ]; then
+      log "Could not fetch remote version (offline or rate-limited)"
+      exit 0
+    fi
+
+    log "Installing $BINARY_NAME v$remote_version..."
+    if download_binary "$binary_file" "$remote_version"; then
+      log "First-time install complete"
+    else
+      log "First-time install failed (will retry next session)"
+    fi
+    exit 0
+  fi
+
+  # Update check: binary exists, compare versions
+  log "Checking for updates..."
+
+  local local_version
+  local_version=$(get_local_version)
+  log "Local version: $local_version"
+
+  local remote_version
+  remote_version=$(get_remote_version)
+
+  if [ -z "$remote_version" ]; then
+    log "Could not fetch remote version (offline or rate-limited)"
+    exit 0
+  fi
+
+  log "Remote version: $remote_version"
+
+  if [ "$local_version" = "$remote_version" ]; then
+    log "Already up to date"
+    exit 0
+  fi
+
+  if version_gt "$remote_version" "$local_version"; then
+    log "Update available: $local_version -> $remote_version"
+
+    if download_binary "$binary_file" "$remote_version"; then
+      log "Auto-update complete"
+    else
+      log "Auto-update failed (will retry next session)"
+    fi
+  else
+    log "Local version ($local_version) is newer than remote ($remote_version)"
+  fi
+}
+
+main

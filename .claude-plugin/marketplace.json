@@ -1,0 +1,18 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "codemyspec",
+  "owner": {
+    "name": "CodeMySpec",
+    "url": "https://codemyspec.com"
+  },
+  "metadata": {
+    "description": "Specification-driven development for Phoenix applications"
+  },
+  "plugins": [
+    {
+      "name": "codemyspec",
+      "source": "./",
+      "description": "Design architecture, write specs, generate tests, and implement Phoenix apps with specialized AI agents"
+    }
+  ]
+}
