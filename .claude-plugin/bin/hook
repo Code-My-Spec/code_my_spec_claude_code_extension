@@ -1,0 +1,55 @@
+#!/bin/bash
+# Handle Claude Code hooks via HTTP
+# Reads JSON from stdin, routes to event-specific endpoint
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Read stdin
+STDIN_DATA=$(cat)
+
+# Extract hook_event_name and map to endpoint path
+EVENT=$(echo "$STDIN_DATA" | grep -o '"hook_event_name":"[^"]*"' | cut -d'"' -f4)
+
+case "$EVENT" in
+  SessionStart)  ENDPOINT="/api/hooks/session-start" ;;
+  PreToolUse)    ENDPOINT="/api/hooks/pre-tool-use" ;;
+  PostToolUse)   ENDPOINT="/api/hooks/post-tool-use" ;;
+  Stop)          ENDPOINT="/api/hooks/stop" ;;
+  *)             exit 0 ;;
+esac
+
+PLUGIN_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+CMS_BIN="$PLUGIN_ROOT/bin/cms"
+
+# On SessionStart: ensure binary exists and server is running
+if [ "$EVENT" = "SessionStart" ]; then
+  # Install binary if missing (foreground — must complete before server start)
+  if [ ! -x "$CMS_BIN" ]; then
+    "$SCRIPT_DIR/auto-update" 2>/dev/null
+  else
+    # Binary exists — check for updates in background
+    "$SCRIPT_DIR/auto-update" &>/dev/null &
+    disown
+  fi
+
+  # Start server if not already running.
+  # nohup + stdin redirect detach from Claude Code's process group so the
+  # server survives when the hook (and parent session) exits.
+  if [ -x "$CMS_BIN" ] && ! curl -sf --max-time 1 http://localhost:4003/health >/dev/null 2>&1; then
+    nohup "$CMS_BIN" server >/tmp/cms-server.log 2>&1 </dev/null &
+    disown
+    # Wait up to 30s for server to be ready — cold Burrito cache can take
+    # 20+ seconds on first boot (unpacking 170MB payload + SQLite WAL).
+    for i in $(seq 1 60); do
+      if curl -sf --max-time 1 http://localhost:4003/health >/dev/null 2>&1; then
+        break
+      fi
+      sleep 0.5
+    done
+  fi
+fi
+
+curl -s -X POST "http://localhost:4003${ENDPOINT}" \
+  -H "Content-Type: application/json" \
+  -H "X-Working-Dir: $(pwd)" \
+  -d "$STDIN_DATA"
