@@ -1,0 +1,35 @@
+{
+  "name": "codemyspec",
+  "description": "Specification-driven development for Phoenix applications — design architecture, write specs, generate tests, and implement with specialized AI agents",
+  "version": "1.4.8",
+  "author": {
+    "name": "CodeMySpec",
+    "url": "https://codemyspec.com"
+  },
+  "license": "MIT",
+  "homepage": "https://codemyspec.com",
+  "repository": "https://github.com/Code-My-Spec/code_my_spec_claude_code_extension",
+  "keywords": [
+    "phoenix",
+    "elixir",
+    "specification",
+    "architecture",
+    "tdd",
+    "bdd",
+    "code-generation",
+    "liveview"
+  ],
+  "mcpServers": {
+    "local": {
+      "type": "http",
+      "url": "http://localhost:4003/mcp",
+      "headers": {
+        "X-Working-Dir": "${PWD}"
+      }
+    },
+    "stories": {
+      "type": "http",
+      "url": "https://codemyspec.com/mcp/stories"
+    }
+  }
+}
