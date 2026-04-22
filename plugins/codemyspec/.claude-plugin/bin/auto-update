@@ -37,10 +37,13 @@ log() {
   echo "[$(date '+%H:%M:%S')] $1" >> "$UPDATE_LOG"
 }
 
-# Get local version from plugin.json
+# Get local version from the installed binary — not the plugin.json.
+# Plugin dir is managed by the marketplace (can be updated independently
+# of the binary), so plugin.json's version may not reflect what `cms`
+# actually is on disk. Always ask the binary.
 get_local_version() {
-  if [ -f "$PLUGIN_JSON" ]; then
-    grep '"version"' "$PLUGIN_JSON" | head -1 | sed 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/'
+  if [ -x "$BIN_DIR/$BINARY_NAME" ]; then
+    "$BIN_DIR/$BINARY_NAME" --version 2>/dev/null | awk '{print $NF}'
   else
     echo "0.0.0"
   fi
