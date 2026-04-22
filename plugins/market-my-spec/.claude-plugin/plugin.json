@@ -1,7 +1,7 @@
 {
   "name": "market-my-spec",
-  "version": "0.1.0",
-  "description": "Use Claude Code as your marketing strategist. Guided 8-step flow that interviews you, researches your customers, and produces an executable 90-day plan. Works for software, consulting, trades, and services.",
+  "version": "0.3.0",
+  "description": "Marketing for founders, in Claude Code. Three skills that work together: /marketing-strategy (guided 8-step strategy flow), /daily-plan (picks today's activities, manages your roster, scaffolds project-local skills), /marketing-stack (sets up the infrastructure your strategy needs — 17 opinionated recipes covering Reddit, Wix, Ghost, WordPress, Stripe, HubSpot, claude-seo, Postiz, Meta Ads, Facebook, Instagram, LinkedIn, Twitter/X, YouTube, GSC, GA4, Resend).",
   "author": {
     "name": "CodeMySpec",
     "url": "https://codemyspec.com"
@@ -14,6 +14,17 @@
     "strategy",
     "positioning",
     "customer-research",
-    "jtbd"
+    "jtbd",
+    "daily-planner",
+    "mcp",
+    "infrastructure",
+    "seo",
+    "social-media",
+    "reddit",
+    "stripe",
+    "hubspot",
+    "wordpress",
+    "ghost",
+    "wix"
   ]
 }
