@@ -1,13 +1,11 @@
 #!/bin/bash
-# Handle Claude Code hooks via HTTP
-# Reads JSON from stdin, routes to event-specific endpoint
+# Route Claude Code hooks to the local cms server.
+# Reads JSON from stdin, POSTs to the matching /api/hooks/* endpoint.
+# On SessionStart, ensures the server is running (via `cms start`).
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-# Read stdin
 STDIN_DATA=$(cat)
 
-# Extract hook_event_name and map to endpoint path
 EVENT=$(echo "$STDIN_DATA" | grep -o '"hook_event_name":"[^"]*"' | cut -d'"' -f4)
 
 case "$EVENT" in
@@ -19,46 +17,23 @@ case "$EVENT" in
 esac
 
 PLUGIN_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-
-# Binary lives in a shared location so it's shared across plugin-version
-# upgrades. Falls back to the legacy per-plugin path for transitional
-# installs where the old auto-update may have dropped the binary there.
 CMS_BIN="$HOME/.codemyspec/bin/cms"
-if [ ! -x "$CMS_BIN" ] && [ -x "$PLUGIN_ROOT/bin/cms" ]; then
-  CMS_BIN="$PLUGIN_ROOT/bin/cms"
-fi
+[ ! -x "$CMS_BIN" ] && [ -x "$PLUGIN_ROOT/bin/cms" ] && CMS_BIN="$PLUGIN_ROOT/bin/cms"
 
-# On SessionStart: ensure binary exists and server is running
 if [ "$EVENT" = "SessionStart" ]; then
-  # Install binary if missing (foreground — must complete before server start)
+  # Install / update the binary if needed. Foreground on first install;
+  # background (fire-and-forget) once the binary exists.
   if [ ! -x "$CMS_BIN" ]; then
     "$SCRIPT_DIR/auto-update" 2>/dev/null
+    CMS_BIN="$HOME/.codemyspec/bin/cms"
   else
-    # Binary exists — check for updates in background
     "$SCRIPT_DIR/auto-update" &>/dev/null &
     disown
   fi
 
-  # Re-resolve CMS_BIN after auto-update may have placed the binary.
-  if [ ! -x "$CMS_BIN" ] && [ -x "$HOME/.codemyspec/bin/cms" ]; then
-    CMS_BIN="$HOME/.codemyspec/bin/cms"
-  fi
-
-  # Start server if not already running.
-  # nohup + stdin redirect detach from Claude Code's process group so the
-  # server survives when the hook (and parent session) exits.
-  if [ -x "$CMS_BIN" ] && ! curl -sf --max-time 1 http://localhost:4003/health >/dev/null 2>&1; then
-    nohup "$CMS_BIN" server >"$HOME/.codemyspec/server.log" 2>&1 </dev/null &
-    disown
-    # Wait up to 30s for server to be ready — cold Burrito cache can take
-    # 20+ seconds on first boot (unpacking 170MB payload + SQLite WAL).
-    for i in $(seq 1 60); do
-      if curl -sf --max-time 1 http://localhost:4003/health >/dev/null 2>&1; then
-        break
-      fi
-      sleep 0.5
-    done
-  fi
+  # Idempotent: `cms start` no-ops if the server is already up, otherwise
+  # daemonizes + waits for /health to respond. Exits 0 on success.
+  [ -x "$CMS_BIN" ] && "$CMS_BIN" start >/dev/null 2>&1
 fi
 
 curl -s -X POST "http://localhost:4003${ENDPOINT}" \
