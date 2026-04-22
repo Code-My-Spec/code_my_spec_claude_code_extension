@@ -4,6 +4,7 @@ Use Claude Code as your marketing strategist, then as your daily operator.
 
 - `/marketing-strategy` — guided 8-step strategy flow. Interviews you, dispatches research agents, produces positioning, messaging, channels, and a 90-day plan.
 - `/daily-plan` — picks today's 1-3 marketing activities from your strategy, points you at the skills that execute them, and keeps your activity roster honest (weekly review, gap detection, project-local skill scaffolding, archival of dead activities).
+- `/marketing-stack` — sets up the marketing infrastructure your strategy calls for (MCPs, API credentials, plugin dependencies, minimal conventions). Recipe-based, MCP-first, `.env`-only secrets. 17 recipes covering Reddit, Wix, Ghost, WordPress, Stripe, HubSpot, claude-seo, GSC, GA4, Postiz, Meta Ads, Facebook, Instagram, LinkedIn, Twitter/X, YouTube, Resend.
 
 Industry-agnostic — works for software founders, consultants, trades, services, and B2C operators.
 
@@ -19,9 +20,10 @@ From a Claude Code session:
 ## The flow
 
 1. **Strategy first** — `/marketing-strategy`. Full 8-step flow on first run; iteration mode on later runs. Produces `marketing/01_current_state.md` through `marketing/08_plan.md`.
-2. **Daily execution** — `/daily-plan`. Reads the strategy, picks today's activities, logs to `marketing/daily/YYYY-MM-DD.md`.
-3. **Weekly re-tune** — `/daily-plan review`. Hit-rate analysis, loop-shift check, roster adjustments.
-4. **As needed** — `/daily-plan add <name>` to scaffold a new activity (writes a project-local skill in `.claude/skills/`), `/daily-plan archive <name>` to bench an unused one.
+2. **Infrastructure setup** — `/marketing-stack`. Reads the strategy, installs the recipes its channels call for (Reddit, Ghost, Stripe, HubSpot, etc.). `.env`-only secrets, reversible installs. Writes `marketing/infrastructure.md` as the source of truth for what's wired up.
+3. **Daily execution** — `/daily-plan`. Reads the strategy + infrastructure + activity roster; picks today's 1-3 activities; logs to `marketing/daily/YYYY-MM-DD.md`.
+4. **Weekly re-tune** — `/daily-plan review`. Hit-rate analysis, loop-shift check, roster adjustments.
+5. **As needed** — `/daily-plan add <name>` to scaffold a new activity, `/daily-plan archive <name>` to bench an unused one, `/marketing-stack install <recipe>` when a new channel goes live, `/marketing-stack fix <recipe>` when an integration breaks.
 
 ## The 8 steps
 
