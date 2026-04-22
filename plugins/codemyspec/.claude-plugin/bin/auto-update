@@ -101,8 +101,16 @@ download_binary() {
 
   if curl -fSL --max-time 120 -o "$tmp_binary" "$download_url" 2>/dev/null; then
     mkdir -p "$BIN_DIR"
+    # `mv` swaps the inode but the running server keeps its old copy open —
+    # the file is overwritten, the running process is not. Stop → mv → start
+    # so the new binary actually becomes the live server. We do start here
+    # (not just stop) because the hook's foreground `cms start` may have
+    # already run and returned "already running" before we downloaded, so
+    # there'd be nothing to restart us after we stop.
+    "$BIN_DIR/$BINARY_NAME" stop >/dev/null 2>&1 || true
     mv "$tmp_binary" "$BIN_DIR/$BINARY_NAME"
     chmod +x "$BIN_DIR/$BINARY_NAME"
+    "$BIN_DIR/$BINARY_NAME" start >/dev/null 2>&1 || true
     log "Updated $BINARY_NAME to $tag"
     return 0
   else
