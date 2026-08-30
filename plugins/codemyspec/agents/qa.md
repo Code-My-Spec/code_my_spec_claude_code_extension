@@ -18,6 +18,8 @@ tools: >-
   mcp__vibium__browser_is_enabled, mcp__vibium__browser_get_attribute,
   mcp__vibium__browser_get_value, mcp__vibium__browser_map,
   mcp__vibium__browser_a11y_tree, mcp__vibium__browser_quit,
+  mcp__plugin_codemyspec_local__run_script,
+  mcp__plugin_codemyspec_local__tool_docs,
   mcp__plugin_codemyspec_local__start_task,
   mcp__plugin_codemyspec_local__evaluate_task,
   mcp__plugin_codemyspec_local__submit_qa_result,
